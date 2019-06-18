@@ -1,6 +1,7 @@
-const request = require("request");
 const yargs = require("yargs");
-const key = require("./key");
+const geocode = require("./geocode/geocode");
+const weather = require("./weather/weather");
+
 const argv = yargs
   .options({
     a: {
@@ -13,25 +14,21 @@ const argv = yargs
   .help()
   .alias("help", "h").argv;
 
-var encodedAddress = encodeURIComponent(argv.a);
-
-request(
-  {
-    url: `https://maps.googleapis.com/maps/api/geocode/json?key=${
-      key.api_key
-    }&address=${encodedAddress}`,
-    json: true
-  },
-  (error, response, body) => {
-    if (error) {
-      console.log(`Google cannot connect to the servers`);
-    } else if (body.status === "ZERO_RESULTS") {
-      console.log("Unable to find that address");
-    } else if (body.status === "OK") {
-      console.log(`Address: ${body.results[0].formatted_address}
-        Latitude : ${body.results[0].geometry.location.lat}
-        Longitude : ${body.results[0].geometry.location.lng}
-        `);
-    }
+geocode.geocodeAddress(argv.a, (errorMessage, result) => {
+  if (errorMessage) {
+    console.log(errorMessage);
+  } else {
+    console.log(result.address);
+    weather.getTemperature(
+      result.latitude,
+      result.longitude,
+      (errorMessage, weatherResult) => {
+        if (errorMessage) {
+          console.log(errorMessage);
+        } else {
+          console.log(weatherResult);
+        }
+      }
+    );
   }
-);
+});
